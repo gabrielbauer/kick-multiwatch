@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kick Multiwatch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Extensão para Chrome, Edge, Brave e Firefox que ganha pontos de canal da Kick em vários canais ao mesmo tempo, usando o login do seu navegador.">
+<meta property="og:title" content="Kick Multiwatch">
+<meta property="og:description" content="Pontos da Kick em vários canais, direto do navegador.">
+<meta property="og:image" content="assets/painel-extensao.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,600..800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column with a split hero (pitch | dashboard window); a "control room" feel borrowed from the app itself */
+:root {
+  --paper: #f2f4f1; --surface: #ffffff; --ink: #141a21; --muted: #59636e; --line: #d6dbd4;
+  --accent: #5b3fc4; --accent-ink: #ffffff; --points: #9a6412; --risk: #a3322a; --risk-bg: #fbeeec;
+  --window: #12161b;
+  --f-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #11161b; --surface: #182027; --ink: #e5e9e4; --muted: #9aa4ae; --line: #2a333c;
+  --accent: #b39dff; --accent-ink: #1a1236; --points: #f2c14e; --risk: #f08a80; --risk-bg: #2a1a19;
+  --window: #0b0e12; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #11161b; --surface: #182027; --ink: #e5e9e4; --muted: #9aa4ae; --line: #2a333c;
+  --accent: #b39dff; --accent-ink: #1a1236; --points: #f2c14e; --risk: #f08a80; --risk-bg: #2a1a19;
+  --window: #0b0e12; color-scheme: dark }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.6 var(--f-body); }
+img { max-width: 100%; display: block; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+code, kbd { font-family: var(--f-mono); font-size: .86em; }
+code { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; overflow-wrap: anywhere; }
+kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; background: var(--surface); }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 125%; line-height: 1.05; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(36px, 6.4vw, 64px); font-weight: 800; letter-spacing: -.01em; }
+h2 { font-size: clamp(26px, 3.6vw, 36px); font-weight: 700; }
+h3 { font-size: 19px; font-weight: 700; font-stretch: 112%; }
+p { margin: 0; }
+.label { font: 500 12px var(--f-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+
+/* top bar */
+.top { border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; flex-wrap: wrap; }
+.brand { font: 800 18px var(--f-display); font-stretch: 125%; color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: 10px; }
+.brand-mark { display: grid; grid-template-columns: repeat(3, 6px); gap: 2px; }
+.brand-mark i { width: 6px; height: 6px; background: var(--accent); border-radius: 1px; }
+.brand-mark i:nth-child(2n) { opacity: .45; }
+.top nav { display: flex; gap: 18px; flex-wrap: wrap; font-size: 15px; }
+.top nav a { color: var(--muted); text-decoration: none; }
+.top nav a:hover { color: var(--ink); }
+.top-right { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.btn.support-btn { background: var(--points); border-color: var(--points); color: var(--paper); padding: 8px 14px; font-size: 15px; }
+.btn.support-btn.sm { padding: 6px 12px; font-size: 14px; }
+.support-note { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 32px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); max-width: 760px; }
+.support-note p { flex: 1 1 260px; font-size: 16px; }
+
+/* hero */
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 48px; align-items: center; padding-block: 56px 48px; }
+@media (max-width: 880px) { .hero .wrap { grid-template-columns: 1fr; gap: 32px; padding-block: 36px 32px; } }
+.pitch { display: grid; gap: 20px; min-width: 0; }
+.pitch .lede { font-size: 19px; max-width: 34em; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 10px; font: 700 16px var(--f-body); padding: 12px 20px; border-radius: 5px; text-decoration: none; border: 2px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn svg { width: 18px; height: 18px; flex: none; }
+.fineprint { font-size: 14px; color: var(--muted); }
+.window { background: var(--window); border-radius: 8px; padding: 30px 6px 6px; position: relative; box-shadow: 0 24px 48px -24px rgba(10, 20, 30, .45); min-width: 0; }
+.window::before { content: ""; position: absolute; top: 11px; left: 12px; width: 9px; height: 9px; border-radius: 50%; background: #5d6672; box-shadow: 15px 0 0 #5d6672, 30px 0 0 #5d6672; }
+.window::after { content: attr(data-url); position: absolute; top: 6px; left: 50%; transform: translateX(-50%); font: 12px var(--f-mono); color: #8c96a1; }
+.window img { border-radius: 4px; }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+/* numbers strip */
+.facts { border-block: 1px solid var(--line); background: var(--surface); }
+.facts .wrap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; padding-block: 24px; }
+@media (max-width: 760px) { .facts .wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fact b { display: block; font: 700 28px var(--f-display); font-stretch: 112%; font-variant-numeric: tabular-nums; }
+.fact span { font-size: 14px; color: var(--muted); }
+.fact.pts b { color: var(--points); }
+
+section.block { padding-block: 64px; }
+section.block + section.block { border-top: 1px solid var(--line); }
+@media (max-width: 760px) { section.block { padding-block: 44px; } }
+.block-head { display: grid; gap: 10px; margin-bottom: 32px; max-width: 46em; }
+.block-head p { color: var(--muted); }
+
+/* RAM chart */
+.ram { display: grid; gap: 12px; max-width: 760px; }
+.ram-row { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr) 5.5em; gap: 14px; align-items: center; font-size: 15px; }
+@media (max-width: 600px) { .ram-row { grid-template-columns: minmax(0, 1fr) 5em; } .ram-row .track { grid-column: 1 / -1; grid-row: 2; } }
+.track { height: 12px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.track i { display: block; height: 100%; background: var(--muted); }
+.ram-row.us .track i { background: var(--accent); }
+.ram-row.us { font-weight: 700; }
+.ram-row .v { font: 500 14px var(--f-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.note { font-size: 14px; color: var(--muted); margin-top: 14px; max-width: 46em; }
+
+/* guide */
+.os-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 28px; }
+.os-tabs button { font: 600 15px var(--f-body); padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+.os-tabs button[aria-selected="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: s; max-width: 760px; }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 16px; padding-block: 20px; border-top: 1px solid var(--line); }
+ol.steps > li::before { content: counter(s); grid-row: 1 / span 2; font: 700 22px var(--f-mono); color: var(--accent); }
+ol.steps h3 { align-self: center; }
+ol.steps .body { display: grid; gap: 10px; color: var(--ink); }
+ol.steps .body p, ol.steps .body li { max-width: 62ch; }
+ol.steps ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+pre.cmd { margin: 0; background: var(--window); color: #dfe5df; border-radius: 5px; padding: 12px 14px; overflow-x: auto; font: 14px/1.5 var(--f-mono); }
+pre.cmd .c { color: #8c96a1; }
+.tip { font-size: 15px; color: var(--muted); }
+
+/* risks */
+.risks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px; }
+@media (max-width: 760px) { .risks { grid-template-columns: 1fr; } }
+.risk { display: grid; gap: 8px; padding-block: 20px; border-top: 1px solid var(--line); }
+.risk .level { font: 500 12px var(--f-mono); text-transform: uppercase; letter-spacing: .08em; }
+.risk .level.high { color: var(--risk); }
+.risk .level.mid { color: var(--points); }
+.risk .level.info { color: var(--muted); }
+.risk p { font-size: 16px; }
+.bottomline { margin-top: 28px; background: var(--risk-bg); border-left: 3px solid var(--risk); padding: 16px 18px; border-radius: 0 4px 4px 0; max-width: 760px; }
+
+/* faq */
+.faq { max-width: 760px; }
+.faq details { border-top: 1px solid var(--line); padding-block: 16px; }
+.faq details:last-child { border-bottom: 1px solid var(--line); }
+.faq summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font: 500 20px/1 var(--f-mono); color: var(--muted); }
+.faq details[open] summary::after { content: "−"; }
+.faq details p { margin-top: 10px; color: var(--ink); max-width: 62ch; }
+
+/* support + ads */
+.support { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 40px; align-items: center; }
+@media (max-width: 760px) { .support { grid-template-columns: 1fr; } }
+.donate { display: flex; flex-wrap: wrap; gap: 10px; }
+.donate .empty { font: 14px var(--f-mono); color: var(--muted); border: 1px dashed var(--line); border-radius: 5px; padding: 12px 16px; }
+.ad-slot { margin-block: 8px; }
+.ad-slot.placeholder { border: 1px dashed var(--line); border-radius: 5px; min-height: 100px; display: grid; place-items: center; font: 13px var(--f-mono); color: var(--muted); text-align: center; padding: 16px; }
+
+footer { border-top: 1px solid var(--line); }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; padding-block: 28px 40px; font-size: 14px; color: var(--muted); }
+footer nav { display: flex; gap: 18px; flex-wrap: wrap; }
+footer a { color: var(--muted); }
+/* extension page additions */
+.features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 32px; }
+@media (max-width: 880px) { .features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
+.feature { display: grid; gap: 6px; align-content: start; padding-block: 18px; border-top: 1px solid var(--line); }
+.feature p { font-size: 16px; color: var(--ink); }
+.slots { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px 24px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 32px; max-width: 860px; }
+@media (max-width: 640px) { .slots { grid-template-columns: 1fr; } }
+.slot-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chan { font: 500 14px var(--f-mono); padding: 6px 12px; border-radius: 5px; border: 1px solid var(--line); background: var(--paper); display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
+.chan.earn { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.chan small { font: 600 11px var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.chan.earn small { color: var(--accent); }
+.chan .x2 { color: var(--points); font-weight: 700; }
+.slots .cap { font: 500 12px var(--f-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.arrow { color: var(--muted); font: 16px var(--f-mono); }
+.dl-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.tested { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 980px; }
+@media (max-width: 760px) { .tested { grid-template-columns: 1fr; } }
+.tested div { display: grid; gap: 8px; align-content: start; }
+.tested ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 16px; }
+.tested .ok { color: var(--accent); } .tested .sim { color: var(--points); } .tested .no { color: var(--risk); }
+details.alt { max-width: 760px; border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; background: var(--surface); }
+details.alt summary { cursor: pointer; font-weight: 700; }
+details.alt[open] summary { margin-bottom: 12px; }
+details.alt .body { display: grid; gap: 10px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Kick Multiwatch, início"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>Kick Multiwatch</a>
+    <div class="top-right">
+    <nav aria-label="Seções">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#instalar">Instalar</a>
+      <a href="#riscos">Riscos</a>
+      <a href="#faq">Dúvidas</a>
+      <a href="#apoie">Apoie</a>
+    </nav>
+    <a class="btn support-btn sm" href="https://livepix.gg/gravi7y" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg> Apoie o dev</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="pitch">
+        <div class="label">Extensão grátis · Chrome, Edge, Brave, Firefox</div>
+        <h1>Pontos da Kick em vários canais, direto do navegador.</h1>
+        <p class="lede">O Kick Multiwatch é uma extensão que acompanha vários canais da Kick ao mesmo tempo e vai ganhando pontos de canal para você, sem abrir nenhuma live. Usa o login que você já tem na kick.com: sem Python, sem colar token.</p>
+        <div class="dl-row">
+          <a class="btn" href="kick-multiwatch-chrome.zip" download>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
+            Chrome, Edge, Brave
+          </a>
+          <a class="btn" href="kick-multiwatch-firefox.zip" download>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
+            Firefox
+          </a>
+          <a class="btn support-btn" href="https://livepix.gg/gravi7y" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg> Apoie o dev</a>
+        </div>
+        <p class="fineprint">Versão <span id="ext-version">0.3.1</span> · instalação manual em 2 minutos, <a href="#instalar">veja como</a> · não oficial, não é da Kick. <a href="#riscos">Leia os riscos antes.</a></p>
+      </div>
+      <figure style="margin:0">
+        <div class="window" data-url="painel da extensão"><img src="assets/painel-extensao.png" width="1280" height="500" alt="Painel da extensão Kick Multiwatch: saldo total, ganhos e gastos da sessão, e cartões de canais com os selos Ao vivo, Ganhando e Na fila."></div>
+        <figcaption>O painel da extensão, com dados de exemplo.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="facts">
+    <div class="wrap">
+      <div class="fact"><b>0 instalações</b><span>além da extensão: nada de Python ou programa</span></div>
+      <div class="fact"><b>2 vagas</b><span>ganhando ao mesmo tempo, com troca automática</span></div>
+      <div class="fact pts"><b>~240 pts/hora</b><span>por conta (o dobro em canais onde você é inscrito)</span></div>
+      <div class="fact"><b>Só kick.com</b><span>nenhum dado sai do seu navegador para outro lugar</span></div>
+    </div>
+  </div>
+
+  <div class="wrap"><div class="ad-slot" data-slot="top"></div></div>
+
+  <section class="block" id="como-funciona">
+    <div class="wrap">
+      <div class="block-head">
+        <div class="label">Como funciona</div>
+        <h2>Duas vagas, uma fila, e a vez passa sozinha</h2>
+        <p>A Kick credita +10 pontos a cada 5 minutos em cerca de 2 canais por conta, não importa quantos estejam abertos. Então a extensão coloca 2 canais ao vivo para ganhar e deixa o resto na fila. Quando um canal recebe os pontos, a vaga passa para quem espera há mais tempo.</p>
+      </div>
+      <div class="slots" aria-label="Exemplo de vagas e fila">
+        <span class="cap">Ganhando</span>
+        <div class="slot-row">
+          <span class="chan earn">gaules <span class="x2">2×</span><small>vaga fixa</small></span>
+          <span class="chan earn">loud_coringa <small>+10 agora</small></span>
+        </div>
+        <span class="cap">Na fila</span>
+        <div class="slot-row">
+          <span class="chan">casimiro <small>próximo</small></span>
+          <span class="arrow" aria-hidden="true">←</span>
+          <span class="chan">tck <small>esperando</small></span>
+          <span class="chan">baiano <small>esperando</small></span>
+        </div>
+      </div>
+      <div class="features">
+        <div class="feature"><h3>Login do navegador</h3><p>Se você já está logado na kick.com, não precisa fazer nada. Saiu da conta? A extensão para e pede para entrar de novo. Para trocar de conta, é só entrar com a outra.</p></div>
+        <div class="feature"><h3>Vários canais de uma vez</h3><p>Cole vários nomes separados por espaço ou vírgula. As setas ↑ ↓ mudam a prioridade e o interruptor liga ou desliga cada canal.</p></div>
+        <div class="feature"><h3>Troca automática</h3><p>Depois de cada crédito, a vaga passa para o próximo canal ao vivo. Se um canal ficar 7 minutos sem receber, também passa a vez.</p></div>
+        <div class="feature"><h3>2× para inscritos</h3><p>Onde você é inscrito, a Kick paga 20 em vez de 10. Esses canais ganham primeiro e não saem da vaga. A extensão tenta detectar sozinha, e você também pode marcar.</p></div>
+        <div class="feature"><h3>Painel completo</h3><p>Saldo de cada canal, total, ganhos e gastos da sessão, quem está ao vivo, ganhando ou na fila. Pode fechar a aba: no Chrome a extensão continua trabalhando.</p></div>
+        <div class="feature"><h3>Resgates</h3><p>Quando o saldo de um canal cai, a extensão compara a queda com os preços das recompensas e anota o que você provavelmente resgatou. Ela nunca resgata nada sozinha.</p></div>
+        <div class="feature"><h3>Opções</h3><p>Quantos canais ganham ao mesmo tempo, o modo de troca, os preços das recompensas (padrão 300, 500 e 1000), e baixar ou apagar os dados da sessão.</p></div>
+        <div class="feature"><h3>Pausar a qualquer hora</h3><p>O botão Pausar no topo do painel para tudo na hora. Clique no ícone "K" da extensão para abrir o painel de novo.</p></div>
+        <div class="feature"><h3>Apoie o dev</h3><p>Um botão no painel abre a página de apoio no LivePix. Nada é cobrado nem enviado automaticamente.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="instalar">
+    <div class="wrap">
+      <div class="block-head">
+        <div class="label">Instalar</div>
+        <h2>Do download ao painel em dois minutos</h2>
+        <p>A extensão ainda não está nas lojas, então a instalação é manual. Escolha o seu navegador.</p>
+      </div>
+      <div class="os-tabs" role="tablist" aria-label="Navegador">
+        <button type="button" role="tab" id="tab-chrome" aria-selected="true" data-os="chrome">Chrome, Edge, Brave, Opera</button>
+        <button type="button" role="tab" id="tab-firefox" aria-selected="false" data-os="firefox">Firefox</button>
+      </div>
+      <ol class="steps" data-os-only="chrome">
+        <li>
+          <h3>Baixe e extraia</h3>
+          <div class="body">
+            <p>Baixe o <a href="kick-multiwatch-chrome.zip" download>kick-multiwatch-chrome.zip</a> e <b>extraia</b> para uma pasta que você não vai apagar, por exemplo <code>Documentos/kick-multiwatch</code>. O navegador lê a extensão dessa pasta, então se ela sumir a extensão para.</p>
+          </div>
+        </li>
+        <li>
+          <h3>Ligue o modo do desenvolvedor</h3>
+          <div class="body">
+            <p>Abra <code>chrome://extensions</code> (no Edge, <code>edge://extensions</code>; no Brave, <code>brave://extensions</code>) e ligue <b>Modo do desenvolvedor</b> no canto superior direito.</p>
+          </div>
+        </li>
+        <li>
+          <h3>Carregue a pasta</h3>
+          <div class="body">
+            <p>Clique em <b>Carregar sem compactação</b> e escolha a pasta extraída, a que tem o arquivo <code>manifest.json</code>.</p>
+            <p class="tip">Se você testou uma versão antiga chamada "Kick Pontos (teste)", clique em <b>Remover</b> nela antes.</p>
+          </div>
+        </li>
+        <li>
+          <h3>Fixe e abra o painel</h3>
+          <div class="body">
+            <p>Clique no ícone de quebra-cabeça da barra do navegador, fixe o Kick Multiwatch e clique no "K" verde para abrir o painel.</p>
+            <p class="tip">Pode fechar a aba do painel: a extensão continua ganhando enquanto o navegador estiver aberto.</p>
+          </div>
+        </li>
+      </ol>
+      <ol class="steps" data-os-only="firefox" hidden>
+        <li>
+          <h3>Baixe o arquivo</h3>
+          <div class="body">
+            <p>Baixe o <a href="kick-multiwatch-firefox.zip" download>kick-multiwatch-firefox.zip</a>. Não precisa extrair. Precisa do Firefox 128 ou mais novo.</p>
+          </div>
+        </li>
+        <li>
+          <h3>Carregue a extensão</h3>
+          <div class="body">
+            <p>Abra <code>about:debugging#/runtime/this-firefox</code>, clique em <b>Carregar extensão temporária…</b> e escolha o arquivo baixado.</p>
+          </div>
+        </li>
+        <li>
+          <h3>Dê acesso à kick.com</h3>
+          <div class="body">
+            <p>Clique no ícone "K". Se aparecer <b>Permitir acesso à kick.com</b>, clique e aceite.</p>
+          </div>
+        </li>
+        <li>
+          <h3>Deixe a aba do painel aberta</h3>
+          <div class="body">
+            <p>No Firefox, mantenha a aba do painel aberta enquanto quiser ganhar pontos. Sem ela o Firefox pode suspender a extensão.</p>
+            <p class="tip">Extensão temporária some quando você fecha o Firefox. Na próxima vez, é só carregar de novo pelo mesmo caminho.</p>
+          </div>
+        </li>
+      </ol>
+      <div class="block-head" style="margin:40px 0 0">
+        <h3>Primeiro uso</h3>
+        <p style="color:var(--ink)">Entre na sua conta da kick.com nesse navegador (se já está logado, não precisa fazer nada). Abra o painel pelo ícone "K". Se aparecer "Faça login na Kick", entre na kick.com e clique em <b>Já entrei, verificar</b>. Depois é só adicionar os seus canais.</p>
+      </div>
+      <div class="support-note">
+        <p>Gostou? A extensão é grátis e mantida por uma pessoa só. Qualquer valor no LivePix ajuda a manter ela funcionando quando a Kick muda alguma coisa.</p>
+        <a class="btn support-btn" href="https://livepix.gg/gravi7y" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg> Apoie o dev</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="testes">
+    <div class="wrap">
+      <div class="block-head">
+        <div class="label">Transparência</div>
+        <h2>O que já foi testado</h2>
+        <p>A extensão é nova. Isto é o que se sabe até agora, sem exagero.</p>
+      </div>
+      <div class="tested">
+        <div><h3 class="ok">Testado numa conta real</h3><ul><li>Login pelo navegador (Chrome, Linux)</li><li>Leitura do saldo</li><li>+10 pontos em cerca de 5 minutos num canal</li><li>Extensão ativa por 10 minutos sem o Chrome derrubar</li></ul></div>
+        <div><h3 class="sim">Testado numa Kick simulada</h3><ul><li>Vários canais, 2 vagas e fila</li><li>Troca depois do crédito</li><li>2× tomando a vaga</li><li>Registro de resgates</li><li>Sair e entrar de novo na Kick</li></ul></div>
+        <div><h3 class="no">Ainda não testado</h3><ul><li>Vários canais por horas seguidas na Kick real</li><li>Chrome suspendendo a extensão com a aba fechada por muito tempo</li><li>Firefox em geral</li></ul></div>
+      </div>
+      <p class="note">Em Opções, a seção Registro mostra quantas vezes o navegador parou a extensão. Ela se religa sozinha em até 30 segundos.</p>
+    </div>
+  </section>
+
+  <div class="wrap"><div class="ad-slot" data-slot="middle"></div></div>
+
+  <section class="block" id="riscos">
+    <div class="wrap">
+      <div class="block-head">
+        <div class="label">Leia antes de usar</div>
+        <h2>O que pode dar errado</h2>
+        <p>O Kick Multiwatch é um projeto independente, feito por hobby. Não é feito, aprovado nem suportado pela Kick. Veja o que isso significa para você.</p>
+      </div>
+      <div class="risks">
+        <div class="risk">
+          <div class="level high">Risco para a conta</div>
+          <h3>Pode ir contra as regras da Kick</h3>
+          <p>Ganhar tempo assistido sem estar assistindo de verdade, e contar como espectador em várias lives ao mesmo tempo, pode violar os Termos de Serviço da Kick. A Kick pode tirar pontos, restringir ou banir a conta. Use só numa conta que você aceita arriscar, e decida depois de ler os <a href="https://kick.com/terms-of-service" target="_blank" rel="noopener">termos da Kick</a>.</p>
+        </div>
+        <div class="risk">
+          <div class="level high">Seu login</div>
+          <h3>A extensão usa o seu login da Kick</h3>
+          <p>Ela lê o cookie de login da kick.com que já está no seu navegador, só para fazer pedidos à própria Kick. Ela não guarda esse valor e não envia para nenhum outro servidor. Mesmo assim, só instale a extensão baixada desta página ou do GitHub do projeto: uma cópia alterada por outra pessoa poderia roubar o login.</p>
+        </div>
+        <div class="risk">
+          <div class="level mid">Pode parar de funcionar</div>
+          <h3>Usa endpoints internos da Kick</h3>
+          <p>A API oficial da Kick não tem como ganhar tempo assistido, então a extensão usa os mesmos endpoints privados que o site da kick.com. A Kick muda esses endpoints sem aviso. Quando isso acontece, a extensão quebra até ser atualizada.</p>
+        </div>
+        <div class="risk">
+          <div class="level mid">Sem garantia</div>
+          <h3>Os pontos são limitados e não são garantidos</h3>
+          <p>A Kick credita cerca de 2 canais por vez em cada conta, uns 240 pontos por hora no total, ou o dobro em canais onde você é inscrito. A Kick não documenta nada disso e pode mudar a qualquer momento.</p>
+        </div>
+        <div class="risk">
+          <div class="level info">Instalação manual</div>
+          <h3>Modo do desenvolvedor e avisos do navegador</h3>
+          <p>Fora das lojas, o Chrome só aceita a extensão no modo do desenvolvedor e pode mostrar avisos sobre isso. As atualizações também são manuais: baixe o zip novo, substitua a pasta e clique em recarregar na página de extensões.</p>
+        </div>
+        <div class="risk">
+          <div class="level info">Código aberto</div>
+          <h3>Dá para ler tudo o que ela faz</h3>
+          <p>O código não é minificado e cabe em poucos arquivos. Não tem rastreamento nem código remoto. Ela só fala com kick.com e websockets.kick.com.</p>
+        </div>
+      </div>
+      <p class="bottomline"><b>Resumindo:</b> você usa a extensão com o login da sua conta, por sua conta e risco.</p>
+    </div>
+  </section>
+
+  <section class="block" id="python">
+    <div class="wrap">
+      <div class="block-head">
+        <div class="label">Alternativa</div>
+        <h2>Prefere fora do navegador?</h2>
+        <p>Também existe uma versão em Python, para deixar rodando num terminal, com o mesmo painel em português e o chat de todos os canais. Precisa colar o session_token uma vez.</p>
+      </div>
+      <details class="alt">
+        <summary>Como usar a versão Python</summary>
+        <div class="body">
+          <ol style="margin:0;padding-left:20px;display:grid;gap:6px">
+            <li>Instale o Python 3.9 ou mais novo pelo <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org</a>. No Windows, marque <b>Add Python to PATH</b>.</li>
+            <li>Baixe o <a href="kick-multiwatch-python.zip" download>kick-multiwatch-python.zip</a> e descompacte numa pasta.</li>
+            <li>Windows: dois cliques em <code>start.bat</code>. Mac e Linux: <code>sh start.sh</code> num terminal dentro da pasta.</li>
+            <li>O painel abre em <code>http://127.0.0.1:8787</code> e pede o seu <code>session_token</code>: na kick.com, <kbd>F12</kbd>, Application (no Firefox, Storage), Cookies, <code>session_token</code>. Marque Lembrar para salvar em <code>token.txt</code>, só no seu computador.</li>
+            <li>Deixe a janela do terminal aberta enquanto quiser ganhar. Para parar, feche a janela ou aperte <kbd>Ctrl</kbd>+<kbd>C</kbd>.</li>
+          </ol>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="block" id="faq">
+    <div class="wrap">
+      <div class="block-head">
+        <div class="label">Perguntas</div>
+        <h2>Dúvidas frequentes</h2>
+      </div>
+      <div class="faq">
+        <details><summary>Ela abre as lives?</summary><p>Não. Ela nunca carrega vídeo nem áudio. Só manda à Kick o mesmo sinal de "assistindo" que o player da kick.com manda, e mostra os seus pontos.</p></details>
+        <details><summary>Preciso deixar o navegador aberto?</summary><p>Sim. A extensão só trabalha com o navegador aberto. No Chrome, Edge e Brave pode fechar a aba do painel. No Firefox, deixe a aba do painel aberta.</p></details>
+        <details><summary>Quantos canais posso adicionar?</summary><p>Quantos quiser. Mas a Kick credita só cerca de 2 canais por vez em cada conta, então mais canais não dão mais pontos. A troca automática reparte essas 2 vagas entre a sua lista.</p></details>
+        <details><summary>A extensão resgata recompensas?</summary><p>Não. Ela nunca resgata nada. A aba Resgates só anota o que você resgatou na kick.com, deduzindo pela queda do saldo.</p></details>
+        <details><summary>Por que não está na Chrome Web Store?</summary><p>As lojas costumam recusar ferramentas que simulam tempo assistido em outra plataforma. Por isso, por enquanto, a instalação é manual.</p></details>
+        <details><summary>Como atualizo?</summary><p>Chrome, Edge, Brave: baixe o zip novo, extraia por cima da mesma pasta e clique no botão de recarregar da extensão em <code>chrome://extensions</code>. Firefox: carregue o arquivo novo em <code>about:debugging</code>.</p></details>
+        <details><summary>É grátis?</summary><p>Sim. Se for útil para você, tem o botão Apoie o dev no painel e os links aqui embaixo. Apoiar não libera nada extra.</p></details>
+        <details><summary>Parou de funcionar. E agora?</summary><p>Provavelmente a Kick mudou alguma coisa. Veja se tem uma versão mais nova nesta página.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="apoie">
+    <div class="wrap support">
+      <div class="block-head" style="margin:0">
+        <div class="label">Apoie</div>
+        <h2>Ajude a manter atualizado</h2>
+        <p>A Kick muda o site com frequência, e cada mudança pede um conserto. Se a extensão te ajuda, uma contribuição pequena paga esse trabalho.</p>
+      </div>
+      <div class="donate" id="donate"></div>
+    </div>
+  </section>
+
+  <div class="wrap"><div class="ad-slot" data-slot="bottom"></div></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>O Kick Multiwatch é um projeto independente. Não tem relação com a Kick nem é endossado por ela.</p>
+    <nav aria-label="Rodapé">
+      <a href="privacy.html">Privacidade</a>
+      <a id="source-link" href="#" hidden>Código-fonte</a>
+      <a href="#top">Voltar ao topo</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+/* ---------- Site settings: edit these before you publish ---------- */
+const SITE = {
+  // Leave a link empty to hide that button.
+  donate: [
+    { label: "Ko-fi", url: "" },              // e.g. https://ko-fi.com/yourname
+    { label: "GitHub Sponsors", url: "" },    // e.g. https://github.com/sponsors/yourname
+    { label: "PayPal", url: "" },             // e.g. https://paypal.me/yourname
+    { label: "♥ Apoie o dev no LivePix", url: "https://livepix.gg/gravi7y" }
+  ],
+  sourceUrl: "https://github.com/gabrielbauer/kick-multiwatch",          // e.g. https://github.com/yourname/kick-multiwatch
+  // Google AdSense. Paste your publisher ID (ca-pub-...) and one ad unit slot ID per spot.
+  adsense: { client: "", slots: { top: "", middle: "", bottom: "" } },
+  // Shows dashed "ad space" boxes while ads are not set up. Set to false before going live.
+  showAdPlaceholders: false
+};
+/* ------------------------------------------------------------------ */
+
+const $ = (s, el = document) => el.querySelector(s);
+
+// Donation buttons
+(function () {
+  const box = $("#donate");
+  const links = SITE.donate.filter(d => /^https:\/\//.test(d.url));
+  if (!links.length) {
+    box.innerHTML = '<span class="empty">Os links de doação aparecem aqui (configure em SITE.donate)</span>';
+    return;
+  }
+  links.forEach((d, i) => {
+    const a = document.createElement("a");
+    a.className = "btn" + (i ? " ghost" : "");
+    a.href = d.url; a.target = "_blank"; a.rel = "noopener";
+    a.textContent = d.label;
+    box.append(a);
+  });
+})();
+
+if (/^https:\/\//.test(SITE.sourceUrl)) { const s = $("#source-link"); s.href = SITE.sourceUrl; s.hidden = false; }
+
+// Ads: real AdSense units when configured, dashed placeholders otherwise
+(function () {
+  const { client, slots } = SITE.adsense;
+  const slotsEls = document.querySelectorAll(".ad-slot");
+  if (/^ca-pub-\d+$/.test(client)) {
+    const s = document.createElement("script");
+    s.async = true; s.crossOrigin = "anonymous";
+    s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + client;
+    document.head.append(s);
+    slotsEls.forEach(el => {
+      const id = slots[el.dataset.slot];
+      if (!id) return;
+      el.innerHTML = `<ins class="adsbygoogle" style="display:block" data-ad-client="${client}" data-ad-slot="${id}" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    });
+  } else if (SITE.showAdPlaceholders) {
+    slotsEls.forEach(el => { el.classList.add("placeholder"); el.textContent = "Espaço de anúncio (" + el.dataset.slot + "), configure em SITE.adsense"; });
+  }
+})();
+
+// Browser tabs in the install guide, preselected from the visitor's browser
+(function () {
+  const tabs = document.querySelectorAll(".os-tabs [data-os]");
+  function pick(os) {
+    tabs.forEach(t => t.setAttribute("aria-selected", String(t.dataset.os === os)));
+    document.querySelectorAll("[data-os-only]").forEach(el => { el.hidden = el.dataset.osOnly !== os; });
+    try { localStorage.setItem("kmw.browser", os); } catch (e) {}
+  }
+  tabs.forEach(t => t.addEventListener("click", () => pick(t.dataset.os)));
+  let os = null;
+  try { os = localStorage.getItem("kmw.browser"); } catch (e) {}
+  if (os !== "chrome" && os !== "firefox") os = /firefox/i.test(navigator.userAgent) ? "firefox" : "chrome";
+  pick(os);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacidade · Kick Multiwatch</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,700..800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root { --paper: #f2f4f1; --ink: #141a21; --muted: #59636e; --line: #d6dbd4; --accent: #5b3fc4; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --paper: #11161b; --ink: #e5e9e4; --muted: #9aa4ae; --line: #2a333c; --accent: #b39dff; color-scheme: dark } }
+:root[data-theme="dark"] { --paper: #11161b; --ink: #e5e9e4; --muted: #9aa4ae; --line: #2a333c; --accent: #b39dff; color-scheme: dark }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.65 "Atkinson Hyperlegible", system-ui, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+h1, h2 { font-family: "Archivo", "Arial Narrow", sans-serif; font-stretch: 125%; line-height: 1.1; margin: 0; }
+h1 { font-size: 36px; } h2 { font-size: 22px; margin-top: 18px; }
+p, ul { margin: 0; } ul { padding-left: 22px; display: grid; gap: 6px; }
+a { color: var(--accent); }
+.muted { color: var(--muted); font-size: 15px; }
+code { font-size: .9em; }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="index.html">← Kick Multiwatch</a></p>
+  <h1>Privacidade</h1>
+  <p class="muted">Esta política vale para este site e para a extensão Kick Multiwatch. Última atualização: 26 de outubro de 2026</p>
+
+  <h2>Este site</h2>
+  <p>Este é um site estático. Não tem contas, formulários nem banco de dados, e não pede nem recebe o seu login da Kick.</p>
+  <ul>
+    <li>O serviço de hospedagem (GitHub Pages ou Cloudflare Pages) guarda registros comuns do servidor, como endereço IP e páginas acessadas, por segurança e operação. Veja as políticas de privacidade deles.</li>
+    <li>As fontes vêm do Google Fonts, que recebe o seu endereço IP ao entregá-las.</li>
+    <li>A página lembra qual navegador você escolheu no guia de instalação, no armazenamento local do seu próprio navegador. Essa informação nunca sai do navegador.</li>
+  </ul>
+
+  <h2>Anúncios</h2>
+  <p>Este site pode mostrar anúncios do Google AdSense.</p>
+  <ul>
+    <li>Fornecedores terceiros, incluindo o Google, usam cookies para veicular anúncios com base nas suas visitas anteriores a este site ou a outros sites.</li>
+    <li>O uso de cookies de publicidade permite que o Google e os parceiros dele veiculem anúncios com base nas suas visitas a este site e/ou a outros sites na Internet.</li>
+    <li>Você pode desativar a publicidade personalizada nas <a href="https://adssettings.google.com" target="_blank" rel="noopener">Configurações de anúncios do Google</a>, ou desativar cookies de alguns fornecedores terceiros em <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">aboutads.info</a>.</li>
+    <li>Visitantes do Espaço Econômico Europeu, do Reino Unido e da Suíça recebem um pedido de consentimento antes de ver anúncios personalizados.</li>
+  </ul>
+
+  <h2>Doações</h2>
+  <p>Os links de doação levam a serviços de terceiros (como Livepix, Ko-fi, GitHub Sponsors ou PayPal). Os pagamentos são processados por esses serviços, sob as políticas de privacidade deles. Este site não vê os seus dados de pagamento.</p>
+
+  <h2>A extensão Kick Multiwatch</h2>
+  <p>A extensão não coleta, não vende e não envia dados pessoais para o desenvolvedor nem para terceiros.</p>
+  <ul>
+    <li><b>Login da Kick:</b> a extensão lê o cookie de sessão da kick.com que já está no seu navegador, só para fazer pedidos à própria Kick (saldo de pontos, canais ao vivo, conexão de espectador). Ela não salva esse valor e não o envia para nenhum outro servidor.</li>
+    <li><b>Dados guardados no seu navegador:</b> lista de canais, preferências, preços das recompensas e o histórico da sessão (pontos ganhos, gastos e resgates). Ficam só no armazenamento local do navegador e são apagados quando você remove a extensão ou usa "Apagar dados da sessão" em Opções.</li>
+    <li><b>Servidores contatados:</b> somente kick.com e websockets.kick.com.</li>
+    <li><b>Apoie o dev:</b> o botão abre a página de apoio no LivePix (livepix.gg) numa aba nova. Nada é enviado automaticamente.</li>
+    <li>A extensão não tem análise de uso, telemetria nem código remoto.</li>
+  </ul>
+
+  <h2>A versão Python</h2>
+  <p>A versão Python roda só no seu computador e se conecta apenas à kick.com e ao serviço de chat da Kick. O seu session_token fica na memória e, se você marcar Lembrar, em <code>token.txt</code> na pasta do programa. O registro de cada sessão é salvo na pasta <code>sessoes</code>, também só no seu computador. Nada é enviado para este site nem para o autor.</p>
+
+  <h2>Contato</h2>
+  <p>Dúvidas sobre esta política: <span id="contact">obauergabriel@gmail.com | <a href="https://github.com/gabrielbauer/kick-multiwatch/issues" rel="noopener">GitHub</a></span>.</p>
+
+  <p class="muted">O Kick Multiwatch é um projeto independente. Não tem relação com a Kick nem é endossado por ela.</p>
+</main>
+</body>
+</html>
